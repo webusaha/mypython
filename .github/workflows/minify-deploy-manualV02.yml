@@ -1,0 +1,227 @@
+name: 🔨 Manual Minify + Deploy to Cloudflare Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_path:
+        description: 'File/folder path to minify (leave empty for all new files)'
+        required: false
+        default: ''
+        type: string
+      commit_message:
+        description: 'Commit message for minify changes'
+        required: false
+        default: '🔨 Manual minify and deploy'
+        type: string
+
+permissions:
+  contents: write
+  deployments: write
+  statuses: write
+
+jobs:
+  minify-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      ###########################################
+      # 1. CHECKOUT REPO
+      ###########################################
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      ###########################################
+      # 2. SETUP NODE
+      ###########################################
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      ###########################################
+      # 3. INSTALL MINIFY TOOLS
+      ###########################################
+      - name: Install minify tools
+        run: |
+          npm install -g html-minifier-terser terser csso-cli
+          echo "✅ Tools installed: HTML/CSS/JS minifiers"
+
+      ###########################################
+      # 4. DETECT FILES TO MINIFY
+      ###########################################
+      - name: Get files to minify
+        id: get-files
+        run: |
+          if [ -z "${{ github.event.inputs.file_path }}" ]; then
+            # Get files from last commit
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+            echo "📝 Minifying new/changed files from last commit:"
+          else
+            # Use specific file/folder
+            if [ -d "${{ github.event.inputs.file_path }}" ]; then
+              CHANGED_FILES=$(find "${{ github.event.inputs.file_path }}" -type f \( -name "*.html" -o -name "*.css" -o -name "*.js" \))
+            elif [ -f "${{ github.event.inputs.file_path }}" ]; then
+              CHANGED_FILES="${{ github.event.inputs.file_path }}"
+            else
+              echo "❌ File/folder not found: ${{ github.event.inputs.file_path }}"
+              exit 1
+            fi
+            echo "📝 Minifying specific path: ${{ github.event.inputs.file_path }}"
+          fi
+          
+          echo "$CHANGED_FILES" > changed-files.txt
+          echo "files=$(cat changed-files.txt)" >> $GITHUB_OUTPUT
+          
+          # Count files
+          HTML_COUNT=$(grep -c "\.html$" changed-files.txt || true)
+          CSS_COUNT=$(grep -c "\.css$" changed-files.txt || true)
+          JS_COUNT=$(grep -c "\.js$" changed-files.txt || true)
+          
+          echo "📊 Files to minify:"
+          echo "   HTML: $HTML_COUNT files"
+          echo "   CSS: $CSS_COUNT files"
+          echo "   JS: $JS_COUNT files"
+          echo "   Total: $((HTML_COUNT + CSS_COUNT + JS_COUNT)) files"
+
+      ###########################################
+      # 5. MINIFY HTML FILES
+      ###########################################
+      - name: Minify HTML files
+        run: |
+          if [ -f changed-files.txt ]; then
+            while IFS= read -r file; do
+              if [[ "$file" == *.html ]] && [ -f "$file" ]; then
+                echo "🔨 Minifying HTML: $file"
+                html-minifier-terser "$file" \
+                  --collapse-whitespace \
+                  --remove-comments \
+                  --remove-attribute-quotes \
+                  --remove-optional-tags \
+                  --remove-redundant-attributes \
+                  --remove-script-type-attributes \
+                  --remove-style-link-type-attributes \
+                  --use-short-doctype \
+                  --minify-css true \
+                  --minify-js true \
+                  -o "$file"
+              fi
+            done < changed-files.txt
+          fi
+
+      ###########################################
+      # 6. MINIFY CSS FILES
+      ###########################################
+      - name: Minify CSS files
+        run: |
+          if [ -f changed-files.txt ]; then
+            while IFS= read -r file; do
+              if [[ "$file" == *.css ]] && [ -f "$file" ]; then
+                echo "🎨 Minifying CSS: $file"
+                csso "$file" --output "$file"
+              fi
+            done < changed-files.txt
+          fi
+
+      ###########################################
+      # 7. MINIFY JS FILES
+      ###########################################
+      - name: Minify JavaScript files
+        run: |
+          if [ -f changed-files.txt ]; then
+            while IFS= read -r file; do
+              if [[ "$file" == *.js ]] && [ -f "$file" ]; then
+                echo "⚡ Minifying JavaScript: $file"
+                terser "$file" \
+                  --compress \
+                  --mangle \
+                  --comments false \
+                  --output "$file"
+              fi
+            done < changed-files.txt
+          fi
+
+      ###########################################
+      # 8. SHOW MINIFIED FILES
+      ###########################################
+      - name: Show minified files
+        run: |
+          echo "✅ Minification complete!"
+          if [ -f changed-files.txt ]; then
+            echo "📦 Files processed:"
+            cat changed-files.txt | while read file; do
+              if [ -f "$file" ]; then
+                SIZE=$(wc -c < "$file")
+                echo "   - $file ($SIZE bytes)"
+              fi
+            done
+          fi
+
+      ###########################################
+      # 9. COMMIT MINIFIED FILES
+      ###########################################
+      - name: Commit minified files
+        run: |
+          git config user.name "Minify Deploy Bot"
+          git config user.email "bot@github.com"
+          
+          git add .
+          
+          if git diff --staged --quiet; then
+            echo "✨ No changes to commit, skipping commit step"
+          else
+            git commit -m "${{ github.event.inputs.commit_message }}"
+            git push
+            echo "✅ Changes committed and pushed"
+          fi
+
+      ###########################################
+      # 10. DEPLOY TO CLOUDFLARE PAGES
+      ###########################################
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+          directory: .
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      ###########################################
+      # 11. PURGE CLOUDFLARE CACHE
+      ###########################################
+      - name: Purge Cloudflare Cache
+        run: |
+          # Get zone ID dari secret
+          if [ -n "${{ secrets.CF_ZONE_ID }}" ]; then
+            echo "🧹 Purging Cloudflare cache for zone: ${{ secrets.CF_ZONE_ID }}"
+            RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              --data '{"purge_everything":true}')
+            
+            SUCCESS=$(echo $RESPONSE | jq -r '.success')
+            if [ "$SUCCESS" == "true" ]; then
+              echo "✅ Cloudflare cache purged successfully!"
+            else
+              ERRORS=$(echo $RESPONSE | jq -r '.errors[0].message')
+              echo "⚠️ Failed to purge cache: $ERRORS"
+            fi
+          else
+            echo "⚠️ CF_ZONE_ID not set, skipping cache purge"
+          fi
+
+      ###########################################
+      # 12. DEPLOY SUCCESS NOTIFICATION
+      ###########################################
+      - name: Deploy Success Notification
+        if: success()
+        run: |
+          echo "🎉 =================================="
+          echo "🎉 MINIFY + DEPLOY SUCCESSFUL!"
+          echo "🎉 =================================="
+          echo "📦 Minified files: $(cat changed-files.txt | wc -l) files"
+          echo "🚀 Deployed to Cloudflare Pages"
+          echo "🧹 Cache purged: ${{ secrets.CF_ZONE_ID != '' && '✅ Yes' || '⚠️ No (set CF_ZONE_ID)' }}"
+          echo "📝 Commit message: ${{ github.event.inputs.commit_message }}"
