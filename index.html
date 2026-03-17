@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            text-align: center;
+        }
+        .loading {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚀 Mengalihkan ke Aplikasi...</h1>
+        <div class="loading"></div>
+        <p>Jika tidak otomatis redirect, klik tombol di bawah:</p>
+        <a href="http://10.151.242.7:5000" class="btn" id="manualLink">Buka Aplikasi</a>
+        
+        <div class="warning">
+            ⚠️ Pastikan:<br>
+            1. HP server dalam 1 jaringan WiFi yang sama<br>
+            2. Aplikasi Flask sudah jalan (python app.py)<br>
+            3. IP server masih <strong>10.151.242.7:5000</strong>
+        </div>
+    </div>
+
+    <script>
+        // 🔴 GANTI IP INI KALAU BERUBAH
+        const LOCAL_IP = 'http://10.151.242.7:5000';
+        
+        // Update link manual
+        document.getElementById('manualLink').href = LOCAL_IP;
+        
+        // Redirect otomatis setelah 3 detik
+        setTimeout(function() {
+            window.location.href = LOCAL_IP;
+        }, 3000);
+        
+        // Coba fetch dulu buat test koneksi
+        fetch(LOCAL_IP, { mode: 'no-cors' })
+            .then(() => console.log('✅ Server reachable'))
+            .catch(() => {
+                document.querySelector('.warning').innerHTML += 
+                    '<br><br>❌ Server tidak terdeteksi. Pastikan Flask sudah jalan.';
+            });
+    </script>
+</body>
+</html>
