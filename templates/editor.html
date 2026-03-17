@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor CMS - Tim Digital</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .section-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #e9ecef;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: #007bff;
+            color: white;
+        }
+        .editor-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: 500px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .debug-raw {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow: auto;
+            font-size: 12px;
+        }
+        .btn-preview {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #17a2b8;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            z-index: 1000;
+        }
+        .btn-preview:hover {
+            color: white;
+            background: #138496;
+        }
+        .path-debug {
+            font-size: 10px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✏️ Editor CMS - Tim Digital</h1>
+            <div class="btn-group">
+                <a href="/" class="btn btn-primary" target="_blank">👁️ Preview</a>
+                <a href="/export-website" class="btn btn-success" 
+                   onclick="return confirm('Download seluruh website sebagai ZIP?')">
+                   ⬇️ Download Website (ZIP)
+                </a>
+            </div>
+        </div>
+
+        <div class="section-tabs" id="sectionTabs">
+            <button class="tab-btn active" onclick="loadSection('header')">Header</button>
+            <button class="tab-btn" onclick="loadSection('hero')">Hero</button>
+            <button class="tab-btn" onclick="loadSection('layanan')">Layanan</button>
+            <button class="tab-btn" onclick="loadSection('tentang')">Tentang</button>
+            <button class="tab-btn" onclick="loadSection('tim')">Tim</button>
+            <button class="tab-btn" onclick="loadSection('portfolio')">Portfolio</button>
+            <button class="tab-btn" onclick="loadSection('harga')">Harga</button>
+            <button class="tab-btn" onclick="loadSection('kontak')">Kontak</button>
+            <button class="tab-btn" onclick="loadSection('footer')">Footer</button>
+            <button class="tab-btn btn-success" onclick="loadAllJSON()">📄 Semua JSON</button>
+        </div>
+
+        <div class="editor-panel" id="editorPanel">
+            <div style="text-align: center; padding: 50px; color: #666;">
+                📝 Pilih section di atas untuk mulai mengedit
+            </div>
+        </div>
+    </div>
+
+    <a href="/" class="btn-preview" target="_blank">🔍 Buka Website</a>
+
+    <script>
+        let allData = {};
+
+        async function loadAllData() {
+            try {
+                const response = await fetch('/api/sections');
+                allData = await response.json();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        async function loadSection(section) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            try {
+                const response = await fetch(`/api/section/${section}`);
+                const data = await response.json();
+                
+                // Update allData
+                allData[section] = data;
+                
+                // Tampilkan data mentah untuk debugging
+                let html = `<div class="debug-raw">
+                    <strong>Data Mentah (JSON):</strong>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>`;
+                
+                if (Array.isArray(data)) {
+                    html += renderListEditorRaw(section, data);
+                } else {
+                    html += renderObjectEditorRaw(section, data);
+                }
+                
+                document.getElementById('editorPanel').innerHTML = html;
+            } catch (error) {
+                alert('Error loading section');
+            }
+        }
+
+        function renderObjectEditorRaw(section, data) {
+            let html = `<h2>Edit ${section}</h2>`;
+            html += `<div class="row">`;
+            
+            const renderField = (obj, path) => {
+                for (let [key, value] of Object.entries(obj)) {
+                    const currentPath = path ? `${path}_${key}` : `${section}_${key}`;
+                    
+                    if (value && typeof value === 'object' && !Array.isArray(value)) {
+                        html += `<div class="col-12"><h4>${key.replace(/_/g, ' ')}</h4></div>`;
+                        renderField(value, currentPath);
+                    } else if (Array.isArray(value)) {
+                        html += `<div class="col-12"><h4>${key.replace(/_/g, ' ')}</h4>
+                        <div class="alert alert-info">Array (${value.length} item)</div></div>`;
+                    } else {
+                        html += `
+                            <div class="col-md-6 form-group">
+                                <label>${key.replace(/_/g, ' ')}</label>
+                                <input type="text" class="form-control" 
+                                       id="field_${currentPath}" 
+                                       value="${(value || '').toString().replace(/"/g, '&quot;')}" 
+                                       placeholder="${key.replace(/_/g, ' ')}">
+                                <div class="path-debug">ID: field_${currentPath}</div>
+                            </div>
+                        `;
+                    }
+                }
+            };
+            
+            renderField(data, section);
+            
+            html += `</div>`;
+            html += `<button class="btn btn-success mt-3" onclick="saveSection('${section}')">💾 Simpan</button>`;
+            return html;
+        }
+
+        function renderListEditorRaw(section, items) {
+            let html = `<h2>Edit ${section}</h2>`;
+            html += `<div class="list-items">`;
+            
+            if (items.length === 0) {
+                html += `<p class="text-center text-muted">Belum ada item.</p>`;
+            } else {
+                items.forEach((item, index) => {
+                    html += `
+                        <div class="list-item">
+                            <strong>Item ${index + 1}</strong>
+                            <pre class="mt-2 p-2 bg-light">${JSON.stringify(item, null, 2)}</pre>
+                            <button class="btn btn-sm btn-warning" onclick="editListItem('${section}', ${index})">✏️ Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteListItem('${section}', ${index})">🗑️ Hapus</button>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += `</div>`;
+            html += `<button class="btn btn-success mt-3" onclick="addListItem('${section}')">➕ Tambah Item</button>`;
+            return html;
+        }
+
+        // ========== SAVE SECTION DENGAN AUTO-CLEANUP ==========
+        async function saveSection(section) {
+            const inputs = document.querySelectorAll('[id^="field_"]');
+            
+            // Clone data existing
+            const data = JSON.parse(JSON.stringify(allData[section]));
+            
+            // Update data dari input
+            inputs.forEach(input => {
+                const fullId = input.id;
+                const path = fullId.replace('field_', '').split('_');
+                
+                let current = data;
+                for (let i = 1; i < path.length - 1; i++) {
+                    const key = path[i];
+                    if (!current[key] || typeof current[key] !== 'object') {
+                        current[key] = {};
+                    }
+                    current = current[key];
+                }
+                
+                const lastKey = path[path.length - 1];
+                current[lastKey] = input.value;
+            });
+            
+            // 🔥🔥🔥 AUTO-CLEANUP: Hapus properti duplikat yang bikin kacau
+            if (section === 'tentang') {
+                // Hapus judul lama (nested) kalau ada
+                if (data.judul) {
+                    if (data.judul.utama && !data.judul_utama) {
+                        data.judul_utama = data.judul.utama;
+                    }
+                    delete data.judul; // Hapus nested judul
+                }
+                
+                // Hapus section lama (nested) kalau ada
+                if (data.section) {
+                    if (data.section.number && !data.section_number) {
+                        data.section_number = data.section.number;
+                    }
+                    delete data.section;
+                }
+                
+                // Hapus tab lama (nested) kalau ada
+                if (data.tab) {
+                    delete data.tab;
+                }
+            }
+            
+            console.log('Data to save:', data);
+            
+            try {
+                const response = await fetch(`/api/section/${section}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('✅ Data berhasil disimpan!');
+                    
+                    // Refresh data dari server
+                    const refreshResponse = await fetch(`/api/section/${section}`);
+                    const freshData = await refreshResponse.json();
+                    allData[section] = freshData;
+                    
+                    // Reload section untuk menampilkan data terbaru
+                    loadSection(section);
+                    
+                } else {
+                    alert('❌ Gagal menyimpan data');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // ========== EDIT LIST ITEM DENGAN KATEGORI BEBAS UNTUK PORTOFOLIO ==========
+        async function editListItem(section, index) {
+            if (section === 'portfolio') {
+                // Form khusus portfolio - kategori BEBAS
+                const item = allData[section][index];
+                
+                // Edit kategori (bebas, gak divalidasi)
+                const newKategori = prompt('Masukkan kategori (bebas, contoh: web, mobile, branding, desain, dll):', item.kategori);
+                if (newKategori === null) return;
+                
+                // Edit gambar
+                const newGambar = prompt('Path gambar (contoh: /images/portfolio-img1.jpg):', item.gambar);
+                if (newGambar === null) return;
+                
+                const updatedItem = {
+                    kategori: newKategori.trim(),
+                    gambar: newGambar
+                };
+                
+                try {
+                    const response = await fetch(`/api/section/${section}/${index}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(updatedItem)
+                    });
+                    
+                    if (response.ok) {
+                        alert('✅ Item portofolio berhasil diupdate!');
+                        loadSection(section);
+                    } else {
+                        alert('❌ Gagal mengupdate item');
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            } else {
+                // Untuk section lain, tetap pake JSON prompt
+                const item = allData[section][index];
+                const jsonStr = JSON.stringify(item, null, 2);
+                const newValue = prompt(`Edit item ke-${index + 1} (JSON format):`, jsonStr);
+                
+                if (newValue) {
+                    try {
+                        const parsed = JSON.parse(newValue);
+                        const response = await fetch(`/api/section/${section}/${index}`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(parsed)
+                        });
+                        
+                        if (response.ok) {
+                            alert('✅ Item diupdate!');
+                            loadSection(section);
+                        }
+                    } catch (e) {
+                        alert('Format JSON tidak valid!');
+                    }
+                }
+            }
+        }
+
+        async function deleteListItem(section, index) {
+            if (!confirm(`Hapus item ke-${index + 1}?`)) return;
+            
+            try {
+                const response = await fetch(`/api/section/${section}/${index}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('✅ Item dihapus!');
+                    loadSection(section);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function addListItem(section) {
+            const template = {};
+            
+            if (section === 'layanan') {
+                template.icon = 'icon-cloud';
+                template.title = 'Layanan Baru';
+                template.description = 'Deskripsi layanan baru';
+            } else if (section === 'tim') {
+                template.nama = 'Anggota Baru';
+                template.posisi = 'Posisi';
+                template.foto = '/images/team-default.jpg';
+                template.sosial = { facebook: '#', twitter: '#', dribbble: '#' };
+            } else if (section === 'portfolio') {
+                template.kategori = 'html';
+                template.gambar = '/images/portfolio-default.jpg';
+            } else if (section === 'harga') {
+                template.nama = 'Paket Baru';
+                template.icon = 'icon-cloud';
+                template.harga = 'Rp 0';
+                template.periode = 'per tahun';
+                template.fitur = ['Fitur 1', 'Fitur 2'];
+                template.tombol = 'Pilih Paket';
+            } else {
+                template.name = 'Item Baru';
+                template.value = 'Value';
+            }
+            
+            try {
+                const response = await fetch(`/api/section/${section}/add`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(template)
+                });
+                
+                if (response.ok) {
+                    alert('✅ Item ditambahkan!');
+                    loadSection(section);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function loadAllJSON() {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            try {
+                const response = await fetch('/api/sections');
+                const data = await response.json();
+                
+                const html = `
+                    <h2>📄 Semua Data JSON</h2>
+                    <textarea class="form-control" style="height:400px; font-family:monospace;" id="fullJson">${JSON.stringify(data, null, 2)}</textarea>
+                    <button class="btn btn-success mt-3" onclick="saveFullJSON()">💾 Simpan Semua</button>
+                `;
+                
+                document.getElementById('editorPanel').innerHTML = html;
+            } catch (error) {
+                alert('Error loading JSON');
+            }
+        }
+
+        async function saveFullJSON() {
+            try {
+                const jsonText = document.getElementById('fullJson').value;
+                const data = JSON.parse(jsonText);
+                
+                for (let [section, value] of Object.entries(data)) {
+                    await fetch(`/api/section/${section}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(value)
+                    });
+                }
+                
+                alert('✅ Semua data berhasil disimpan!');
+            } catch (e) {
+                alert('Error: Format JSON tidak valid!');
+            }
+        }
+
+        // Load initial data
+        loadAllData();
+        
+        // Load header section by default after a short delay
+        setTimeout(() => {
+            document.querySelector('.tab-btn.active')?.click();
+        }, 500);
+    </script>
+</body>
+</html>
