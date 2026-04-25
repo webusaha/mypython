@@ -3,11 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting...</title>
+    <title>Poswarga - Customer Service AI</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -15,87 +21,252 @@
             margin: 0;
             padding: 20px;
         }
+        
         .card {
             background: white;
-            border-radius: 15px;
+            border-radius: 20px;
             padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 400px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+            max-width: 450px;
             text-align: center;
+            animation: slideUp 0.5s ease;
         }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .logo {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+        
+        .card h1 {
+            color: #1a73e8;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .card h2 {
+            color: #666;
+            font-size: 16px;
+            font-weight: normal;
+            margin-bottom: 25px;
+        }
+        
         .loading {
             display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #667eea;
+            width: 60px;
+            height: 60px;
+            border: 6px solid #e0e0e0;
+            border-top: 6px solid #1a73e8;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: inline-block;
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
+            padding: 14px 35px;
+            border-radius: 50px;
             font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
-            display: inline-block;
-            margin-top: 20px;
+            margin: 15px 0;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(26, 115, 232, 0.3);
         }
+        
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(26, 115, 232, 0.5);
         }
-        .warning {
-            background: #fff3cd;
-            color: #856404;
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .features {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .feature {
+            flex: 1;
+            background: #f8f9fa;
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+        
+        .feature .icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .feature strong {
+            display: block;
+            margin-bottom: 3px;
+            color: #333;
+        }
+        
+        .feature span {
+            color: #666;
+            font-size: 11px;
+        }
+        
+        .info-box {
+            background: #e8f0fe;
+            border: 1px solid #1a73e8;
+            border-radius: 12px;
+            padding: 15px;
             margin-top: 20px;
-            font-size: 14px;
+            font-size: 13px;
+            color: #1a73e8;
+        }
+        
+        .info-box strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .footer-text {
+            margin-top: 15px;
+            font-size: 11px;
+            color: #999;
+        }
+        
+        /* Loading dots */
+        .dots {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #1a73e8;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+        
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
+        
+        @media (max-width: 480px) {
+            .card {
+                padding: 25px;
+            }
+            
+            .features {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>🚀 Mengalihkan ke Aplikasi...</h1>
-        <div class="loading"></div>
-        <p>Jika tidak otomatis redirect, klik tombol di bawah:</p>
-        <a href="http://10.151.242.7:5000" class="btn" id="manualLink">Buka Aplikasi</a>
+        <div class="logo">📰</div>
+        <h1>Poswarga</h1>
+        <h2>Customer Service AI</h2>
         
-        <div class="warning">
-            ⚠️ Pastikan:<br>
-            1. HP server dalam 1 jaringan WiFi yang sama<br>
-            2. Aplikasi Flask sudah jalan (python app.py)<br>
-            3. IP server masih <strong>10.151.242.7:5000</strong>
+        <div class="loading"></div>
+        <p>Mengalihkan ke layanan Customer Service...</p>
+        
+        <div class="dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
         </div>
+        
+        <p style="font-size: 14px; color: #666;">
+            Jika tidak otomatis redirect dalam 5 detik,<br>klik tombol di bawah:
+        </p>
+        
+        <a href="https://kahfi03.pythonanywhere.com" class="btn" id="manualLink">
+            💬 Buka Customer Service
+        </a>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="icon">🤖</div>
+                <strong>AI Support</strong>
+                <span>Dijawab oleh AI canggih</span>
+            </div>
+            <div class="feature">
+                <div class="icon">⚡</div>
+                <strong>24/7 Online</strong>
+                <span>Selalu siap membantu</span>
+            </div>
+            <div class="feature">
+                <div class="icon">🔒</div>
+                <strong>Aman</strong>
+                <span>Data Anda terlindungi</span>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <strong>ℹ️ Informasi Layanan:</strong>
+            • Pengiriman berita<br>
+            • Pemasangan iklan<br>
+            • Kontributor & kemitraan<br>
+            • Informasi redaksi
+        </div>
+        
+        <p class="footer-text">
+            Powered by OpenRouter + Cloudflare Workers<br>
+            © 2024 Poswarga
+        </p>
     </div>
 
     <script>
-        // 🔴 GANTI IP INI KALAU BERUBAH
-        const LOCAL_IP = 'http://10.151.242.7:5000';
+        // URL PythonAnywhere (ganti kalau berubah)
+        const LIVE_URL = 'https://kahfi03.pythonanywhere.com';
         
         // Update link manual
-        document.getElementById('manualLink').href = LOCAL_IP;
+        document.getElementById('manualLink').href = LIVE_URL;
         
         // Redirect otomatis setelah 3 detik
         setTimeout(function() {
-            window.location.href = LOCAL_IP;
+            window.location.href = LIVE_URL;
         }, 3000);
         
-        // Coba fetch dulu buat test koneksi
-        fetch(LOCAL_IP, { mode: 'no-cors' })
-            .then(() => console.log('✅ Server reachable'))
-            .catch(() => {
-                document.querySelector('.warning').innerHTML += 
-                    '<br><br>❌ Server tidak terdeteksi. Pastikan Flask sudah jalan.';
+        // Cek koneksi ke PythonAnywhere
+        fetch(LIVE_URL + '/health', { mode: 'cors' })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Server online:', data);
+                // Langsung redirect karena server ready
+                window.location.href = LIVE_URL;
+            })
+            .catch(error => {
+                console.log('⚠️ Health check failed, tetap redirect...');
+                // Tetap redirect setelah timeout
             });
     </script>
 </body>
